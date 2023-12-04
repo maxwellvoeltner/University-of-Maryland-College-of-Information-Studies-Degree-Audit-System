@@ -1,3 +1,8 @@
+# disclaimer:
+# this project was started way before we learned about API's which is why we used BeautifulSoup instead
+# it gets the same information though, we just had to specify which html tags to get instead of getting the json dictionary returned from the API
+# so its all good
+
 from bs4 import BeautifulSoup
 import requests
 import sys
@@ -27,7 +32,7 @@ def get_content(course_in, url):
 
     return content
 
-#need try and except clause for course_content = soup.find("div", id = formatted_course) line to handle invalid course error
+#need try and except clause for course_content = soup.find("div", id = formatted_course) line to handle invalid course
 def get_course_content(course_in):
     '''Finds the html content associated with a course on the Schedule of Classes on Testudo.
     Args:
@@ -75,7 +80,7 @@ def get_course_content(course_in):
 def get_credits(course_content):
     '''Finds credits associated with course_in.
     Args:
-        course_in(str): name of the course as appears on Schedule of Classes.
+        course_content(html): html content associated with course_in.
     Returns:
         credits(int): number of credits associated with course_in.
     '''
@@ -110,7 +115,7 @@ def clean_list(old_list):
 def get_requirements(course_content):
     '''gets the restrictions, prerequisites, corequisites, and crosslists associated with a course
     Args:
-        course_in(str): name of a course
+        course_content(html): html content associated with course_in.
     Returns:
         requirements(list): list of restrictions, prerequisites, corequisites, and crosslists associated with a course
         empty list if no requirements are found
@@ -134,7 +139,7 @@ def get_requirements(course_content):
 def get_corequisite(course_content):
     '''gets the corequisites course(s) of a course
     Args:
-        course_in(str): name of a course
+        course_content(html): html content associated with course_in.
     Returns:
         requirement(str): phrase describing corequisite of a course
         empty list if no corequisites are found
@@ -156,7 +161,7 @@ def get_corequisite(course_content):
 def get_prerequisites(course_content):
     '''gets the prerequisite courses for a course
     Args:
-        course_in(str): name of a course
+        course_content(html): html content associated with course_in.
     Returns:
         prerequisites(list): list of prerequisite courses for a course
         empty list if no prerequisites are found
@@ -179,12 +184,15 @@ def get_prerequisites(course_content):
 def get_crosslist(course_content):
     '''gets crosslist courses for a course
     Args:
-        course_in(str): name of a course
+        course_content(html): html content associated with course_in.
     Returns:
         requirement(str): crosslist courses for a course
         empty list if no crosslist is found
     '''
+
     requirements = get_requirements(course_content)
+
+    #finding and returning the crosslist requirement
     for requirement in requirements:
         if requirement.startswith("Credit only granted for:"):
             requirement = crosslist_parser(requirement)
@@ -197,7 +205,7 @@ def get_crosslist(course_content):
 def get_genEd(course_content):
     '''gets the genEd satisfactions for a course
     Args:
-        course_in(str): name of a course
+        course_content(str): name of a course
     Returns:
         genEd(list): list of genEds
         empty list if no genEds are found
@@ -205,17 +213,21 @@ def get_genEd(course_content):
     #retreiving the genEds from the course on webpage
     try:
         genEd = course_content.find("div", class_ = "gen-ed-codes-group six columns")
+        #filtering out the obscure spacing that happens when the gen eds are webscraped
         genEd = genEd.text.replace("\t", "").replace("\n", " ").replace("GenEd:", "").replace(" ", "")
         genEd = genEd.split(",")
 
+        #cycling through each gen ed
         for item in genEd:
 
+            #handling the "or" situation
             if "or" in item:
 
                 genEd.remove(item)
                 satisfactions = item.split("or")
                 genEd.append(satisfactions)
 
+            #sometimes the gen ed is just a list with an empty string (no gen eds) so just return an empty list
             if len(genEd) == 1 and genEd[0] == "":
                 genEd = []
 
